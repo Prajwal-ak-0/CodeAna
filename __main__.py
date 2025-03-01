@@ -13,7 +13,8 @@ def execute_command(args):
     if args.show_repo_map:
         extractor = CodeMetadataExtractor(args.repo_path)
         extractor.traverse_repository()
-        extractor.generate_reports()
+        with open('repo_map.md', 'w') as f:
+            extractor.generate_reports(output_dir=f)
 
 if __name__ == "__main__":
     args = parse_arguments()
