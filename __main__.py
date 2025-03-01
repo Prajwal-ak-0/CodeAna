@@ -17,4 +17,4 @@ def execute_command(args):
 def main():
     args = parse_arguments()
     execute_command(args)
-    main() 
+    main()
