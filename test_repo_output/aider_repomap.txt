@@ -1,0 +1,88 @@
+───────────────────────────────────────────────────────
+Aider v0.75.1
+Main model: gpt-4o with diff edit format
+Weak model: gpt-4o-mini
+Git repo: .git with 6 files
+Repo-map: using 8000 tokens, auto refresh
+Here are summaries of some files present in my git 
+repository.
+Do not propose changes to these files, treat them as 
+*read-only*.
+If you need to edit any of these files, ask me to *add 
+them to the chat* first.
+
+.gitignore
+
+aider_repomap.txt
+
+batch_embedding.py:
+⋮...
+│class AsyncEmbeddingGenerator:
+│    def __init__(self, model: str = 
+"text-embedding-3-small", batch_size: int = 15):
+│        self.client = 
+AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+│        self.model = model
+⋮...
+│    async def embed_batch(self, batch: List[Dict]) -> 
+List[Dict]:
+⋮...
+│    async def embed_chunks(self, chunked_document: 
+List[Dict]) -> List[Dict]:
+⋮...
+│async def main():
+⋮...
+
+database/database_handler.py:
+⋮...
+│class DatabaseHandler:
+│    def __init__(self, db_path: str):
+│        self.db_path = db_path
+⋮...
+│    def _init_db(self):
+⋮...
+│    def store_chunked_docs(self, chunked_docs: 
+List[Dict]) -> None:
+⋮...
+│    def _cosine_similarity(self, query_embedding: 
+List[float], doc_embedding: np.ndarray) -> float:
+⋮...
+│    async def get_relevant_chunks(self, query: str, k:
+int = 3, async_client=None) -> List[Dict]:
+⋮...
+
+database/database_schema.py:
+⋮...
+│def create_simple_schema(fields):
+⋮...
+
+sqlite_rag.py:
+⋮...
+│class SQLiteOpenAIRAG:
+│    def __init__(self, db_path: str = 
+"vector_store.db"):
+│        load_dotenv()
+│        self.db_path = db_path
+│        # self._init_db()
+│        self.db_handler = DatabaseHandler(db_path)
+│        self.db_handler._init_db()
+│        self.async_client = AsyncOpenAI(
+│            api_key=os.getenv("OPENAI_API_KEY"),
+│            timeout=60.0,
+│            max_retries=3
+⋮...
+│    def format_chunks_to_xml(self, chunks: List[Dict])
+-> str:
+⋮...
+│    async def extract_field_value(self, field: str, 
+chunks: List[Dict], doc_type: str = "MSA") -> D
+⋮...
+│    async def process_field(self, field: str, 
+doc_type: str = "MSA") -> Dict[str, Any]:
+⋮...
+│    async def extract_all_fields(self, doc_type: str =
+"MSA") -> List[Dict[str, Any]]:
+⋮...
+│async def main():
+⋮...
+
