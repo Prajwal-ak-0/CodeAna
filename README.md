@@ -105,8 +105,8 @@ The tool will use this API key for the Aider scan and Privado data processing.
 
 1. Clone this repository:
    ```
-   git clone <repository-url>
-   cd <repository-directory>
+   git clone git@github.com:Prajwal-ak-0/CodeAna.git
+   cd CodeAna
    ```
 
 2. Install the required Python packages:
