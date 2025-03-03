@@ -78,12 +78,16 @@ All results are consolidated into a single JSON file (`aider_repomap.json`) that
 ## Prerequisites
 
 - Privado CLI
-- Bearer CLI
+- Bearer CLI ([docs](https://docs.bearer.com/))
+- Aider (`pip install aider-install` and run `aider-install`) ([docs](https://aider.chat/))
 
 ## Important Requirements
 
 ### Git Repository
-⚠️ **WARNING**: The target repository **MUST** be a Git repository with committed changes. Aider requires a Git repository to function properly.
+## ⚠️ **WARNING**
+
+- The target repository **MUST** be a Git repository with committed changes. Aider requires a Git repository to function properly.
+- The target repository must have a `.gitignore` file with `.aider*`.
 
 ### OpenAI API Key
 Set the OpenAI API key as an environment variable before running:
