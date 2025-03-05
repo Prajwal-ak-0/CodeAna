@@ -1,0 +1,97 @@
+COMPLETE FILE PATH,Code Snippet,Sinks,Vulnerabilities
+root/batch_embedding.py,"│class AsyncEmbeddingGenerator:
+
+│    def __init__(self, model: str = 
+""text-embedding-3-small"", batch_size: int = 15):
+│        self.client = 
+AsyncOpenAI(api_key=os.getenv(""OPENAI_API_KEY""))
+│        self.model = model
+⋮...
+│    async def embed_batch(self, batch: List[Dict]) -> 
+List[Dict]:
+⋮...
+│    async def embed_chunks(self, chunked_document: 
+List[Dict]) -> List[Dict]:
+⋮...
+│async def main():
+⋮...
+
+⋮...","<SINK>
+API for OpenAI
+The code snippet is making a call to the OpenAI API to create embeddings from the provided texts using a specified model.
+tmp2.create(input = texts, model = self.model)
+</SINK>",
+root/database/database_handler.py,"│class DatabaseHandler:
+
+│    def __init__(self, db_path: str):
+│        self.db_path = db_path
+⋮...
+
+│    def _init_db(self):
+⋮...
+
+│    def store_chunked_docs(self, chunked_docs: 
+List[Dict]) -> None:
+⋮...
+
+│    def _cosine_similarity(self, query_embedding: 
+List[float], doc_embedding: np.ndarray) -> float:
+⋮...
+│    async def get_relevant_chunks(self, query: str, k:
+int = 3, async_client=None) -> List[Dict]:
+⋮...
+
+⋮...","<SINK>
+SQLite
+The code snippet retrieves all rows from the executed SQL command using the 'fetchall()' method on a SQLite database cursor, indicating that it is reading data from the SQLite database.
+c.fetchall()
+</SINK>",
+root/database/database_schema.py,"⋮...
+│def create_simple_schema(fields):
+⋮...",,
+root/sqlite_rag.py,"│class SQLiteOpenAIRAG:
+
+│    def __init__(self, db_path: str = 
+""vector_store.db""):
+│        load_dotenv()
+│        self.db_path = db_path
+│        # self._init_db()
+│        self.db_handler = DatabaseHandler(db_path)
+│        self.db_handler._init_db()
+│        self.async_client = AsyncOpenAI(
+│            api_key=os.getenv(""OPENAI_API_KEY""),
+│            timeout=60.0,
+│            max_retries=3
+⋮...
+
+│    def format_chunks_to_xml(self, chunks: List[Dict])
+-> str:
+⋮...
+│    async def extract_field_value(self, field: str, 
+chunks: List[Dict], doc_type: str = ""MSA"") -> D
+⋮...
+│    async def process_field(self, field: str, 
+doc_type: str = ""MSA"") -> Dict[str, Any]:
+⋮...
+│    async def extract_all_fields(self, doc_type: str =
+""MSA"") -> List[Dict[str, Any]]:
+⋮...
+│async def main():
+⋮...
+
+⋮...","<SINK>
+API for OpenAI
+The code initializes an asynchronous connection to the OpenAI API using an API key retrieved from environment variables, with specified timeout and retry settings.
+AsyncOpenAI(api_key = os.getenv(""OPENAI_API_KEY""), timeout = 60.0, max_retries = 3)
+</SINK>
+
+<SINK>
+SQLite
+The code snippet is obtaining a cursor object from the SQLite connection, which is typically used to execute SQL queries and interact with the database.
+conn.cursor()
+</SINK>","<VULNERABILITIES>
+Security Report ===================================== Rules: https://docs.bearer.com/reference/rules [v0.47.1] Language  Default Rules  Custom Rules  Files Python    88             0             4 CRITICAL: Unsanitized external input in code generation [CWE-94] 104                 schema = globals()[schema_name] ===================================== 88 checks, 1 findings CRITICAL: 1 (CWE-94)
+HIGH
+https://docs.bearer.com/reference/rules/python_lang_code_injection
+bearer ignore add 9fa4629e07eef6c9eb4f849b9d87265b_0
+</VULNERABILITIES>"
