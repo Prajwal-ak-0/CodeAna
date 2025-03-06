@@ -5,6 +5,7 @@ This file contains all the configuration settings for the application.
 Environment Variables:
 - OPENAI_API_KEY: Your OpenAI API key
 - PROJECT_DIR: Path to the target project directory that will be analyzed
+- GITHUB_PROJECT_DIR: Path to the cloned GitHub repository that will be analyzed
 - PRIVADO_CLI_PATH: Path to the privado-cli directory (e.g., /home/user/privado-cli)
 - RUN_AIDER: Set to "false" to skip Aider scan
 - RUN_PRIVADO: Set to "false" to skip Privado scan
@@ -42,17 +43,27 @@ def parse_bool_env(env_var, default=True):
     return value not in ('false', '0', 'no', 'n', 'f')
 
 # Files directory for all intermediate files
-FILES_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'files')
+# This can be overridden by the GITHUB_PROJECT_DIR environment variable
+FILES_DIR = os.environ.get("FILES_DIR", os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'files'))
 # Create the files directory if it doesn't exist
 os.makedirs(FILES_DIR, exist_ok=True)
 
 # General settings
 # PROJECT_DIR is the target directory that will be analyzed
 DEFAULT_PROJECT_DIR = os.environ.get("PROJECT_DIR", "")
+# GITHUB_PROJECT_DIR is the cloned GitHub repository that will be analyzed
+GITHUB_PROJECT_DIR = os.environ.get("GITHUB_PROJECT_DIR", "")
+
+# Log the project directories
 if DEFAULT_PROJECT_DIR:
-    print(f"Using project directory from environment: {DEFAULT_PROJECT_DIR}")
+    print(f"Using local project directory from environment: {DEFAULT_PROJECT_DIR}")
     if not os.path.isdir(DEFAULT_PROJECT_DIR):
         print(f"Warning: Project directory '{DEFAULT_PROJECT_DIR}' does not exist.")
+
+if GITHUB_PROJECT_DIR:
+    print(f"Using GitHub project directory from environment: {GITHUB_PROJECT_DIR}")
+    if not os.path.isdir(GITHUB_PROJECT_DIR):
+        print(f"Warning: GitHub project directory '{GITHUB_PROJECT_DIR}' does not exist.")
 
 # Aider settings
 RUN_AIDER = parse_bool_env("RUN_AIDER", True)

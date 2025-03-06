@@ -26,6 +26,7 @@ from src.processors import (
 
 from src.config import (
     DEFAULT_PROJECT_DIR,
+    GITHUB_PROJECT_DIR,
     RUN_AIDER,
     RUN_PRIVADO,
     RUN_BEARER,
@@ -36,19 +37,27 @@ from src.config import (
     FILES_DIR
 )
 
-def get_project_directory():
+def get_project_directory(is_github_repo=False):
     """
     Get the project directory from the user or configuration.
     PROJECT_DIR refers to the target directory that will be analyzed.
     
+    Args:
+        is_github_repo (bool): Whether to use the GitHub project directory
+        
     Returns:
         str: Absolute path to the project directory
     """
-    if DEFAULT_PROJECT_DIR:
-        project_dir = DEFAULT_PROJECT_DIR
-        print(f"Using target project directory from configuration: {project_dir}")
+    if is_github_repo:
+        # For GitHub repos, use the current working directory as fallback
+        project_dir = os.environ.get("GITHUB_PROJECT_DIR") or os.getcwd()
+        print(f"Using GitHub project directory: {project_dir}")
     else:
-        project_dir = input("Enter the project target directory (the directory you want to analyze): ")
+        if DEFAULT_PROJECT_DIR:
+            project_dir = DEFAULT_PROJECT_DIR
+            print(f"Using target project directory from configuration: {project_dir}")
+        else:
+            project_dir = input("Enter the project target directory (the directory you want to analyze): ")
     
     if not os.path.isdir(project_dir):
         print(f"Error: Directory '{project_dir}' does not exist.")
@@ -165,9 +174,12 @@ def run_bearer_task(project_dir):
         print("Skipping bearer processing.")
         return False
 
-def main():
+def main(is_github_repo=False):
     """
     Main function that orchestrates the entire process.
+    
+    Args:
+        is_github_repo (bool): Whether to use the GitHub project directory
     """
     try:
         # Ensure files directory exists
@@ -181,7 +193,7 @@ def main():
             sys.exit(1)
             
         # Task 1: Get project directory and run aider
-        project_dir = get_project_directory()
+        project_dir = get_project_directory(is_github_repo)
         
         if RUN_AIDER:
             print("Running Aider scan...")

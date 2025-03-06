@@ -40,6 +40,7 @@ The application can be configured using environment variables. You can set these
 |----------------------|-------------|---------------|
 | `OPENAI_API_KEY` | Your OpenAI API key | (Required) |
 | `PROJECT_DIR` | Path to the target project directory that will be analyzed | (Prompted if not set) |
+| `GITHUB_PROJECT_DIR` | Path to the cloned GitHub repository that will be analyzed | (Set by github_process.py) |
 | `PRIVADO_CLI_PATH` | Path to the privado-cli directory (e.g., /home/user/privado-cli) | (Prompted if not set) |
 | `RUN_AIDER` | Whether to run Aider scan | `true` |
 | `RUN_PRIVADO` | Whether to run Privado scan | `true` |
@@ -80,9 +81,12 @@ The project is organized as follows:
   - `config.py`: Configuration settings
   - `main.py`: Main entry point
 - `files/`: Directory for all intermediate files generated during execution
+- `github_repos/`: Directory for cloned GitHub repositories
 - `main.py`: Main entry point that imports from src
+- `github_process.py`: Script to process GitHub repositories
 - `check_env.py`: Script to check environment variables
 - `clean_files.py`: Script to clean up the files directory
+- `clean_github_repos.py`: Script to clean up the GitHub repositories directory
 
 ## Verification
 
@@ -130,24 +134,47 @@ Set the OpenAI API key as an environment variable before running:
 
 ## Usage
 
+### Analyzing a Local Repository
+
 1. **Enter the target project directory to analyze**
    - This should be the absolute path to your Git repository (e.g., `/home/user/projects/my-repo`)
    - The directory must be a Git repository with committed changes
    - This path will be used for all scans (Aider, Privado, and Bearer)
 
-2. The script will run an Aider scan to map the repository
+2. Run the main script:
+   ```bash
+   python main.py
+   ```
 
-3. You'll be asked if you want to run a Privado scan for data flow analysis
+3. The script will run an Aider scan to map the repository
+
+4. You'll be asked if you want to run a Privado scan for data flow analysis
    - If yes, you'll need to provide the path to the Privado CLI directory
    - This should be the directory containing the `privado` executable (e.g., `/home/user/privado-cli`)
 
-4. You'll be asked if you want to run a Bearer scan for security vulnerabilities
+5. You'll be asked if you want to run a Bearer scan for security vulnerabilities
 
-5. All results will be consolidated into `aider_repomap.json`
+6. All results will be consolidated into `aider_repomap.json`
+
+### Analyzing a GitHub Repository
+
+1. Run the GitHub processing script:
+   ```bash
+   ./github_process.py
+   ```
+
+2. **Enter the GitHub repository URL to analyze**
+   - This should be a public GitHub repository URL (e.g., `https://github.com/username/repo`)
+   - The repository will be cloned to the `github_repos` directory
+   - A `files` directory will be created inside the cloned repository for intermediate files
+
+3. The script will run the same analysis pipeline as for local repositories
+
+4. All results will be available in the `files` directory inside the cloned repository
 
 ## Output Files
 
-All output files are stored in the `files/` directory:
+All output files are stored in the `files/` directory (or in the `files/` directory inside the cloned GitHub repository):
 
 - `aider_repomap.txt`: Raw output from the Aider scan
 - `aider_repomap.json`: Structured JSON representation of your codebase with all analysis results
@@ -157,10 +184,19 @@ All output files are stored in the `files/` directory:
 - `bearer_output.csv`: Processed data from the Bearer scan
 - `output.csv`: Final CSV output with all analysis results
 
-You can clean up the files directory by running:
-```bash
-./clean_files.py
-```
+## Cleanup
+
+You can clean up the generated files and repositories using the following scripts:
+
+- To clean up the files directory:
+  ```bash
+  ./clean_files.py
+  ```
+
+- To clean up the GitHub repositories directory:
+  ```bash
+  ./clean_github_repos.py
+  ```
 
 ## Example Repositories
 
