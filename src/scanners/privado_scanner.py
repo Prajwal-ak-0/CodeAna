@@ -2,6 +2,10 @@ import os
 import sys
 import uuid
 from src.utils import create_script, run_script, copy_file
+from src.config import PRIVADO_CLI_PATH, PRIVADO_OUTPUT_FILE, FILES_DIR
+
+# Default Privado CLI path if not specified in config
+DEFAULT_PRIVADO_CLI_PATH = "/home/prajwalak/Documents/privado-cli"
 
 def create_privado_script():
     """
@@ -10,8 +14,8 @@ def create_privado_script():
     Returns:
         str: Name of the created script
     """
-    script_name = "run_privado.sh"
-    script_content = """#!/bin/bash
+    script_name = os.path.join(FILES_DIR, "run_privado.sh")
+    script_content = f"""#!/bin/bash
 # Navigate to the privado-cli directory
 cd "$1"
 
@@ -53,12 +57,18 @@ def run_privado_scan(project_dir):
         str: Path to the output file or None if an error occurred
     """
     try:
-        # Ask user for privado-cli path
-        privado_cli_path = input("Enter the path to privado-cli directory (e.g., /path/to/privado-cli): ")
+        # Get privado-cli path from config or use default
+        privado_cli_path = PRIVADO_CLI_PATH
+        if not privado_cli_path:
+            privado_cli_path = DEFAULT_PRIVADO_CLI_PATH
+            print(f"Using default Privado CLI path: {privado_cli_path}")
+        else:
+            print(f"Using Privado CLI path from configuration: {privado_cli_path}")
         
         # Validate inputs
         if not os.path.isdir(privado_cli_path):
             print(f"Error: Privado CLI directory not found at '{privado_cli_path}'")
+            print("Please set the PRIVADO_CLI_PATH environment variable to the correct path.")
             return None
         
         # Check if privado executable exists in the directory
@@ -66,9 +76,6 @@ def run_privado_scan(project_dir):
         if not os.path.exists(privado_executable):
             print(f"Warning: 'privado' executable not found in '{privado_cli_path}'")
             print("Will try to run the script anyway, but it might fail.")
-        
-        # Get current directory for copying the file back
-        current_dir = os.getcwd()
         
         # Handle existing .privado folder
         handle_existing_privado_folder(project_dir)
@@ -78,13 +85,12 @@ def run_privado_scan(project_dir):
         print(f"Running privado scan on directory: {project_dir}")
         print("This may take some time. Please wait...")
         
-        # Run the privado scan with current directory as third argument
-        run_script(script_name, privado_cli_path, project_dir, current_dir)
+        # Run the privado scan with files directory as third argument
+        run_script(script_name, privado_cli_path, project_dir, FILES_DIR)
         
-        # Check if the output file exists in the current directory
-        output_file = os.path.join(current_dir, "privado.json")
-        if not os.path.exists(output_file):
-            print(f"Warning: {output_file} not found after running privado scan.")
+        # Check if the output file exists in the files directory
+        if not os.path.exists(PRIVADO_OUTPUT_FILE):
+            print(f"Warning: {PRIVADO_OUTPUT_FILE} not found after running privado scan.")
             
             # Check if .privado directory exists in target directory
             privado_dir = os.path.join(project_dir, ".privado")
@@ -95,11 +101,11 @@ def run_privado_scan(project_dir):
                 
                 if os.path.exists(privado_json_path):
                     print(f"Found privado.json in {privado_dir}")
-                    print("Copying to current directory...")
+                    print(f"Copying to {PRIVADO_OUTPUT_FILE}...")
                     
                     # Copy the file manually
-                    copy_file(privado_json_path, "privado.json")
-                    return "privado.json"
+                    copy_file(privado_json_path, PRIVADO_OUTPUT_FILE)
+                    return PRIVADO_OUTPUT_FILE
                 else:
                     print(f"Error: privado.json not found in {privado_dir}")
                     print("The scan might still be running or failed to create the file.")
@@ -109,8 +115,8 @@ def run_privado_scan(project_dir):
                 print("The scan might have failed or is still running.")
                 return None
         
-        print(f"Successfully created: privado.json")
-        return "privado.json"
+        print(f"Successfully created: {PRIVADO_OUTPUT_FILE}")
+        return PRIVADO_OUTPUT_FILE
     
     except Exception as e:
         print(f"Error running Privado scan: {e}")

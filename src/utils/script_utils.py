@@ -14,6 +14,11 @@ def create_script(script_name, script_content):
         bool: True if successful, False otherwise
     """
     try:
+        # Ensure the directory exists
+        script_dir = os.path.dirname(script_name)
+        if script_dir and not os.path.exists(script_dir):
+            os.makedirs(script_dir, exist_ok=True)
+            
         # Write the shell script
         with open(script_name, "w") as f:
             f.write(script_content)
@@ -61,7 +66,23 @@ def run_script(script_name, *args):
     """
     try:
         print(f"Running {script_name} with arguments: {args}")
-        subprocess.run([f"./{script_name}"] + list(args), check=True)
+        # Get the directory and basename of the script
+        script_dir = os.path.dirname(script_name)
+        script_basename = os.path.basename(script_name)
+        
+        # Change to the script directory if it's not empty
+        if script_dir:
+            current_dir = os.getcwd()
+            os.chdir(script_dir)
+            try:
+                subprocess.run([f"./{script_basename}"] + list(args), check=True)
+            finally:
+                # Change back to the original directory
+                os.chdir(current_dir)
+        else:
+            # Run the script in the current directory
+            subprocess.run([f"./{script_name}"] + list(args), check=True)
+            
         return True
     except subprocess.CalledProcessError as e:
         print(f"Error running script {script_name}: {e}")

@@ -2,6 +2,7 @@ import os
 import sys
 import json
 import re
+from src.config import AIDER_JSON_FILE
 
 def parse_file_content(content: str) -> dict:
     """
@@ -84,7 +85,8 @@ def parse_input_file(input_file: str):
     Returns:
         list: List of tuples (filepath, content)
     """
-    file_header_re = re.compile(r'^([a-zA-Z0-9._/\-]+(?:\.gitignore|\.py|\.sh|\.json|\.js|\.jsx|\.ts|\.tsx|\.ejs))\:?\s*$')
+    # Updated regex to include more file extensions
+    file_header_re = re.compile(r'^([a-zA-Z0-9._/\-]+(?:\.gitignore|\.py|\.sh|\.json|\.js|\.jsx|\.ts|\.tsx|\.css|\.html|\.md|\.svg|\.mjs))\:?\s*$')
     
     files = []
     current_filepath = None
@@ -124,6 +126,9 @@ def insert_into_tree(root: dict, filepath: str, content: str) -> None:
         filepath (str): Path to the file
         content (str): Content of the file
     """
+    # Normalize the filepath to handle different formats
+    filepath = filepath.replace('\\', '/')
+    
     parts = filepath.split('/')
     current_node = root
     for i, part in enumerate(parts):
@@ -177,7 +182,7 @@ def convert_to_json(input_file):
     Returns:
         str: Path to the output JSON file
     """
-    output_file = "aider_repomap.json"
+    output_file = AIDER_JSON_FILE
     try:
         # Parse the input file and build the directory tree
         files = parse_input_file(input_file)

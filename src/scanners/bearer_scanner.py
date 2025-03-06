@@ -1,6 +1,7 @@
 import os
 import sys
 from src.utils import create_script, run_script, delete_script, copy_file
+from src.config import BEARER_OUTPUT_FILE, FILES_DIR
 
 def create_bearer_script():
     """
@@ -9,8 +10,8 @@ def create_bearer_script():
     Returns:
         str: Name of the created script
     """
-    script_name = "run_bearer.sh"
-    script_content = """#!/bin/bash
+    script_name = os.path.join(FILES_DIR, "run_bearer.sh")
+    script_content = f"""#!/bin/bash
 # Navigate to the target project directory
 cd "$1"
 
@@ -43,34 +44,30 @@ def run_bearer_scan(project_dir):
         str: Path to the output file or None if an error occurred
     """
     try:
-        # Get current directory for copying the file back
-        current_dir = os.getcwd()
-        
         # Create and run the script
         script_name = create_bearer_script()
         print(f"Running bearer scan on directory: {project_dir}")
         print("This may take some time. Please wait...")
         
-        # Run the script
-        run_script(script_name, project_dir, current_dir)
+        # Run the script with files directory as the second argument
+        run_script(script_name, project_dir, FILES_DIR)
         
-        # Verify bearer_output.txt exists in current directory
-        output_file = os.path.join(current_dir, "bearer_output.txt")
-        if os.path.exists(output_file):
-            print(f"Successfully copied bearer_output.txt to current directory")
-            return "bearer_output.txt"
+        # Verify bearer_output.txt exists in files directory
+        if os.path.exists(BEARER_OUTPUT_FILE):
+            print(f"Successfully copied bearer_output.txt to {FILES_DIR}")
+            return BEARER_OUTPUT_FILE
         else:
-            print(f"Error: bearer_output.txt was not copied to current directory")
+            print(f"Error: bearer_output.txt was not copied to {FILES_DIR}")
             
             # Check if the file exists in the target directory
             bearer_output_path = os.path.join(project_dir, "bearer_output.txt")
             if os.path.exists(bearer_output_path):
                 print(f"Found bearer_output.txt in {project_dir}")
-                print("Copying to current directory...")
+                print(f"Copying to {BEARER_OUTPUT_FILE}...")
                 
                 # Copy the file manually
-                copy_file(bearer_output_path, "bearer_output.txt")
-                return "bearer_output.txt"
+                copy_file(bearer_output_path, BEARER_OUTPUT_FILE)
+                return BEARER_OUTPUT_FILE
             else:
                 print(f"Error: bearer_output.txt not found in {project_dir}")
                 return None

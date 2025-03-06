@@ -2,6 +2,7 @@ import os
 import csv
 import re
 import json
+from src.config import BEARER_OUTPUT_FILE, BEARER_CSV_FILE, AIDER_JSON_FILE
 
 # Regular expression patterns for different parts of the report
 RISK_RE = re.compile(r"^(LOW|MEDIUM|HIGH):\s*(.+)$")
@@ -116,8 +117,8 @@ def process_bearer_data():
     Process Bearer data and create a CSV file.
     """
     try:
-        input_file = "bearer_output.txt"
-        output_file = "bearer_output.csv"
+        input_file = BEARER_OUTPUT_FILE
+        output_file = BEARER_CSV_FILE
         
         # Check if input file exists
         if not os.path.exists(input_file):
@@ -162,11 +163,28 @@ def update_vulnerabilities(json_tree, csv_file):
         Returns:
             dict: File node if found, None otherwise
         """
-        # If this is a file node (has "structure"), compute its full path.
+        # Normalize paths for comparison
+        target = target.replace('\\', '/')
+        
+        # Handle common path prefixes that might be different
+        target_basename = os.path.basename(target)
+        target_dirname = os.path.dirname(target)
+        
+        # If this is a file node (has "structure"), check if it matches
         if "structure" in node:
             full_path = current_path + node["name"]
+            
+            # Try exact match first
             if full_path == target:
                 return node
+                
+            # Try matching just the basename if paths don't match exactly
+            if node["name"] == target_basename:
+                # Check if the parent directory matches the end of the target directory
+                parent_path = current_path.rstrip('/')
+                if parent_path and target_dirname.endswith(parent_path):
+                    return node
+        
         # Prepare new path: skip adding "root" to the path.
         new_path = current_path
         if node.get("name") and node["name"] != "root":
@@ -192,8 +210,20 @@ def update_vulnerabilities(json_tree, csv_file):
                 "message_to_fix": row["Message To Fix"]
             }
             
-            # Find the file node in the JSON tree.
+            # Try to find the file node in the JSON tree
             node = find_file_node(json_tree, file_path)
+            
+            # If not found, try with alternative path formats
+            if node is None:
+                # Try with 'you-talk/' prefix (common in the output)
+                if not file_path.startswith('you-talk/'):
+                    alt_path = 'you-talk/' + file_path
+                    node = find_file_node(json_tree, alt_path)
+                # Try without 'you-talk/' prefix
+                elif file_path.startswith('you-talk/'):
+                    alt_path = file_path[len('you-talk/'):]
+                    node = find_file_node(json_tree, alt_path)
+            
             if node:
                 # Append the vulnerability to the node's "vulnerabilities" list.
                 node["vulnerabilities"].append(vulnerability)
@@ -207,8 +237,8 @@ def update_json_with_vulnerabilities():
     Update the JSON tree with vulnerabilities from the CSV file.
     """
     try:
-        output_json_file = "aider_repomap.json"  # JSON file generated in Task 2
-        csv_file = "bearer_output.csv"           # CSV file from bearer processing
+        output_json_file = AIDER_JSON_FILE  # JSON file generated in Task 2
+        csv_file = BEARER_CSV_FILE          # CSV file from bearer processing
         
         # Check if both files exist
         if not os.path.exists(output_json_file):

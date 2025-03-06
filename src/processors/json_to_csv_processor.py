@@ -1,6 +1,7 @@
 import os
 import json
 import csv
+from src.config import AIDER_JSON_FILE, FINAL_CSV_FILE
 
 def extract_code_snippet(node):
     """
@@ -111,8 +112,8 @@ def convert_json_to_csv():
     """
     Convert the JSON file to CSV.
     """
-    json_file = "aider_repomap.json"
-    output_file = "output.csv"
+    json_file = AIDER_JSON_FILE
+    output_file = FINAL_CSV_FILE
     try:
         # Check if the JSON file exists
         if not os.path.exists(json_file):

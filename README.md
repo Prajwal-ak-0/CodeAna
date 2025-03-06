@@ -30,28 +30,65 @@ This repository contains Docker configuration files to set up an environment wit
    docker exec -it codeana bash
    ```
 
-<<<<<<< HEAD
+## Configuration
+
+The application can be configured using environment variables. You can set these variables in your shell or create a `.env` file in the project root directory.
+
+### Available Configuration Options
+
+| Environment Variable | Description | Default Value |
+|----------------------|-------------|---------------|
+| `OPENAI_API_KEY` | Your OpenAI API key | (Required) |
+| `PROJECT_DIR` | Path to the target project directory that will be analyzed | (Prompted if not set) |
+| `PRIVADO_CLI_PATH` | Path to the privado-cli directory (e.g., /home/user/privado-cli) | (Prompted if not set) |
+| `RUN_AIDER` | Whether to run Aider scan | `true` |
+| `RUN_PRIVADO` | Whether to run Privado scan | `true` |
+| `RUN_BEARER` | Whether to run Bearer scan | `true` |
+| `OPENAI_MODEL` | OpenAI model to use | `gpt-4o-mini` |
+| `OPENAI_BATCH_SIZE` | Number of rows to process in each batch | `5` |
+| `OPENAI_MAX_RETRIES` | Maximum number of retries for OpenAI API calls | `5` |
+
+### Example .env File
+
+```
+# OpenAI API key
+OPENAI_API_KEY=your_openai_api_key_here
+
+# Project settings
+PROJECT_DIR=/path/to/your/project
+PRIVADO_CLI_PATH=/path/to/privado-cli
+
+# Feature toggles (true/false)
+RUN_AIDER=true
+RUN_PRIVADO=true
+RUN_BEARER=true
+
+# OpenAI settings
+OPENAI_MODEL=gpt-4o-mini
+OPENAI_BATCH_SIZE=5
+OPENAI_MAX_RETRIES=5
+```
+
+## Project Structure
+
+The project is organized as follows:
+
+- `src/`: Source code directory
+  - `utils/`: Utility functions
+  - `scanners/`: Scanner modules for Aider, Privado, and Bearer
+  - `processors/`: Data processing modules
+  - `config.py`: Configuration settings
+  - `main.py`: Main entry point
+- `files/`: Directory for all intermediate files generated during execution
+- `main.py`: Main entry point that imports from src
+- `check_env.py`: Script to check environment variables
+- `clean_files.py`: Script to clean up the files directory
+
 ## Verification
 
 When the container starts, it automatically:
 - Builds the privado-patched Docker image if it doesn't exist
 - Verifies all tools are installed correctly
-=======
-- Privado CLI
-- Bearer CLI ([docs](https://docs.bearer.com/))
-- Aider (`pip install aider-install` and run `aider-install`) ([docs](https://aider.chat/))
-
-## Important Requirements
-
-### Git Repository
-## ⚠️ **WARNING**
-
-- The target repository **MUST** be a Git repository with committed changes. Aider requires a Git repository to function properly.
-- The target repository must have a `.gitignore` file with `.aider*`.
-
-### OpenAI API Key
-Set the OpenAI API key as an environment variable before running:
->>>>>>> 9e9f48e5a4a46a9f03c88bd13f8b512863315695
 
 You can manually verify tool installations by running:
 ```bash
@@ -78,9 +115,21 @@ If you encounter any issues with the Docker build or run process:
 
 2. **Aider Installation Issues**: The installation of Aider adds binaries to `/root/.local/bin`, which is added to the PATH in the Dockerfile.
 
-<<<<<<< HEAD
 3. **.env File Errors**: Ensure your .env file is properly formatted with only environment variable declarations in the form `KEY=value`. No paths or other content should be included.
-=======
+
+## Important Requirements
+
+### Git Repository
+## ⚠️ **WARNING**
+
+- The target repository **MUST** be a Git repository with committed changes. Aider requires a Git repository to function properly.
+- The target repository must have a `.gitignore` file with `.aider*`.
+
+### OpenAI API Key
+Set the OpenAI API key as an environment variable before running:
+
+## Usage
+
 1. **Enter the target project directory to analyze**
    - This should be the absolute path to your Git repository (e.g., `/home/user/projects/my-repo`)
    - The directory must be a Git repository with committed changes
@@ -98,7 +147,7 @@ If you encounter any issues with the Docker build or run process:
 
 ## Output Files
 
-The tool generates several output files:
+All output files are stored in the `files/` directory:
 
 - `aider_repomap.txt`: Raw output from the Aider scan
 - `aider_repomap.json`: Structured JSON representation of your codebase with all analysis results
@@ -106,6 +155,12 @@ The tool generates several output files:
 - `privado_output.csv`: Processed data from the Privado scan
 - `bearer_output.txt`: Raw output from the Bearer scan
 - `bearer_output.csv`: Processed data from the Bearer scan
+- `output.csv`: Final CSV output with all analysis results
+
+You can clean up the files directory by running:
+```bash
+./clean_files.py
+```
 
 ## Example Repositories
 
@@ -153,4 +208,3 @@ This task scans for security vulnerabilities using Bearer. It:
 - Runs a Bearer scan on your target directory
 - Processes the results to identify vulnerabilities
 - Updates the JSON with vulnerability information
->>>>>>> 9e9f48e5a4a46a9f03c88bd13f8b512863315695

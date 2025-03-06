@@ -5,7 +5,8 @@ import json
 from src.utils import (
     initialize_git_repository,
     verify_git_status,
-    delete_script
+    delete_script,
+    copy_file
 )
 
 from src.scanners import (
@@ -23,14 +24,32 @@ from src.processors import (
     convert_json_to_csv
 )
 
+from src.config import (
+    DEFAULT_PROJECT_DIR,
+    RUN_AIDER,
+    RUN_PRIVADO,
+    RUN_BEARER,
+    AIDER_OUTPUT_FILE,
+    AIDER_JSON_FILE,
+    PRIVADO_OUTPUT_FILE,
+    BEARER_OUTPUT_FILE,
+    FILES_DIR
+)
+
 def get_project_directory():
     """
-    Get the project directory from the user and ensure it's a Git repository.
+    Get the project directory from the user or configuration.
+    PROJECT_DIR refers to the target directory that will be analyzed.
     
     Returns:
         str: Absolute path to the project directory
     """
-    project_dir = input("Enter the project target directory: ")
+    if DEFAULT_PROJECT_DIR:
+        project_dir = DEFAULT_PROJECT_DIR
+        print(f"Using target project directory from configuration: {project_dir}")
+    else:
+        project_dir = input("Enter the project target directory (the directory you want to analyze): ")
+    
     if not os.path.isdir(project_dir):
         print(f"Error: Directory '{project_dir}' does not exist.")
         sys.exit(1)
@@ -63,16 +82,14 @@ def run_aider_task(project_dir):
     # Run Aider scan
     input_file = run_aider_scan(project_dir)
     
-    # Verify the file exists in the current directory
-    if not os.path.exists("aider_repomap.txt"):
-        print("Warning: aider_repomap.txt not found in current directory.")
+    # Verify the file exists in the files directory
+    if not os.path.exists(AIDER_OUTPUT_FILE):
+        print(f"Warning: {AIDER_OUTPUT_FILE} not found in files directory.")
         remote_file = os.path.join(project_dir, "aider_repomap.txt")
         if os.path.exists(remote_file):
-            print(f"Copying from {remote_file} to current directory...")
-            with open(remote_file, 'r', encoding='utf-8') as src:
-                with open("aider_repomap.txt", 'w', encoding='utf-8') as dst:
-                    dst.write(src.read())
-            input_file = "aider_repomap.txt"
+            print(f"Copying from {remote_file} to {AIDER_OUTPUT_FILE}...")
+            copy_file(remote_file, AIDER_OUTPUT_FILE)
+            input_file = AIDER_OUTPUT_FILE
             print("File copied successfully.")
         else:
             print(f"Error: Could not find aider_repomap.txt in {project_dir} either.")
@@ -82,7 +99,7 @@ def run_aider_task(project_dir):
     json_file = convert_to_json(input_file)
     
     # Delete aider script
-    delete_script("run_aider.sh")
+    delete_script(os.path.join(FILES_DIR, "run_aider.sh"))
     
     return json_file
 
@@ -96,19 +113,13 @@ def run_privado_task(project_dir):
     Returns:
         bool: True if successful, False otherwise
     """
-    # Ask if user wants to continue with privado scan
-    continue_privado = input("Do you want to continue with the privado scan? (y/n): ").lower()
-    if continue_privado != 'y':
-        print("Skipping privado scan.")
-        return False
-    
     try:
         # Run Privado scan
         privado_json = run_privado_scan(project_dir)
         
         # Check if privado.json exists before proceeding
-        if not os.path.exists("privado.json"):
-            print("Error: privado.json not found. Skipping privado processing.")
+        if not os.path.exists(PRIVADO_OUTPUT_FILE):
+            print(f"Error: {PRIVADO_OUTPUT_FILE} not found. Skipping privado processing.")
             return False
         
         # Process Privado data
@@ -133,19 +144,13 @@ def run_bearer_task(project_dir):
     Returns:
         bool: True if successful, False otherwise
     """
-    # Ask if user wants to continue with bearer scan
-    continue_bearer = input("Do you want to continue with the bearer scan? (y/n): ").lower()
-    if continue_bearer != 'y':
-        print("Skipping bearer scan.")
-        return False
-    
     try:
         # Run Bearer scan
         bearer_output = run_bearer_scan(project_dir)
         
         # Check if bearer_output.txt exists before proceeding
-        if not os.path.exists("bearer_output.txt"):
-            print("Error: bearer_output.txt not found. Skipping bearer processing.")
+        if not os.path.exists(BEARER_OUTPUT_FILE):
+            print(f"Error: {BEARER_OUTPUT_FILE} not found. Skipping bearer processing.")
             return False
         
         # Process Bearer data
@@ -165,6 +170,9 @@ def main():
     Main function that orchestrates the entire process.
     """
     try:
+        # Ensure files directory exists
+        os.makedirs(FILES_DIR, exist_ok=True)
+        
         # Check if OpenAI API key is set
         if not os.environ.get("OPENAI_API_KEY"):
             print("Error: OPENAI_API_KEY environment variable not set.")
@@ -174,22 +182,39 @@ def main():
             
         # Task 1: Get project directory and run aider
         project_dir = get_project_directory()
-        json_file = run_aider_task(project_dir)
         
-        if not json_file:
-            print("Error: Failed to create JSON file. Exiting.")
-            sys.exit(1)
+        if RUN_AIDER:
+            print("Running Aider scan...")
+            json_file = run_aider_task(project_dir)
+            
+            if not json_file:
+                print("Error: Failed to create JSON file. Exiting.")
+                sys.exit(1)
+        else:
+            print("Skipping Aider scan as per configuration.")
+            if not os.path.exists(AIDER_JSON_FILE):
+                print(f"Error: {AIDER_JSON_FILE} not found. Cannot proceed without it.")
+                sys.exit(1)
         
         # Task 2: Run Privado scan and process data
-        run_privado_task(project_dir)
+        if RUN_PRIVADO:
+            print("Running Privado scan...")
+            run_privado_task(project_dir)
+        else:
+            print("Skipping Privado scan as per configuration.")
         
         # Task 3: Run Bearer scan and process data
-        run_bearer_task(project_dir)
+        if RUN_BEARER:
+            print("Running Bearer scan...")
+            run_bearer_task(project_dir)
+        else:
+            print("Skipping Bearer scan as per configuration.")
         
         # Task 4: Convert JSON to CSV
         convert_json_to_csv()
         
         print("All requested tasks completed successfully!")
+        print(f"All output files are available in the '{FILES_DIR}' directory.")
     except KeyboardInterrupt:
         print("\nOperation cancelled by user.")
         sys.exit(1)

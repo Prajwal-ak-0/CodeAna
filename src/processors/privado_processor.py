@@ -4,6 +4,14 @@ import csv
 import time
 from openai import OpenAI
 from typing import List, Dict, Any
+from src.config import (
+    PRIVADO_OUTPUT_FILE,
+    PRIVADO_CSV_FILE,
+    AIDER_JSON_FILE,
+    OPENAI_MODEL,
+    OPENAI_BATCH_SIZE,
+    OPENAI_MAX_RETRIES
+)
 
 # JSON schema for the OpenAI response
 SCHEMA = {
@@ -29,7 +37,7 @@ SCHEMA = {
     "strict": True
 }
 
-def extract_privado_data(json_file_path: str = "privado.json") -> List[Dict[str, str]]:
+def extract_privado_data(json_file_path: str = PRIVADO_OUTPUT_FILE) -> List[Dict[str, str]]:
     """
     Extracts data sink information from a privado.json file and returns a list of dictionaries.
     The dictionaries contain: Data Sink ID, Sink Label, Code Snippet, File Path, Line Number,
@@ -173,13 +181,13 @@ def process_batch(client: OpenAI, rows: List[Dict[str, str]]) -> List[Dict[str, 
     results = []
     for row in rows:
         prompt = create_prompt(row)
-        max_retries = 5
+        max_retries = OPENAI_MAX_RETRIES
         retry_count = 0
 
         while retry_count < max_retries:
             try:
                 response = client.chat.completions.create(
-                    model="gpt-4o-mini",
+                    model=OPENAI_MODEL,
                     messages=[
                         {"role": "system", "content": get_system_prompt()},
                         {"role": "user", "content": prompt},
@@ -221,7 +229,7 @@ def process_batch(client: OpenAI, rows: List[Dict[str, str]]) -> List[Dict[str, 
     
     return results
 
-def process_data(rows: List[Dict[str, str]], output_file: str = "privado_output.csv", batch_size: int = 5):
+def process_data(rows: List[Dict[str, str]], output_file: str = PRIVADO_CSV_FILE, batch_size: int = OPENAI_BATCH_SIZE):
     """
     Process the extracted data by sending it to the OpenAI API in batches,
     then write the final results (with additional AI Sink Label and Code Summary columns)
@@ -288,17 +296,39 @@ def update_sink_details(json_tree, csv_file):
         Returns:
             dict: File node if found, None otherwise
         """
+        # Normalize paths for comparison
+        target_path = target_path.replace('\\', '/')
+        
+        # Handle common path prefixes that might be different
+        target_basename = os.path.basename(target_path)
+        target_dirname = os.path.dirname(target_path)
+        
+        # If this is a file node (has "structure"), check if it matches
         if "structure" in node:
-            # This is a file node; construct its full path.
             full_path = current_path + node["name"]
+            
+            # Try exact match first
             if full_path == target_path:
                 return node
+                
+            # Try matching just the basename if paths don't match exactly
+            if node["name"] == target_basename:
+                # Check if the parent directory matches the end of the target directory
+                parent_path = current_path.rstrip('/')
+                if parent_path and target_dirname.endswith(parent_path):
+                    return node
+        
+        # If this node has children, recursively search them
         if "children" in node:
             for child in node["children"]:
+                # Build the new path based on whether this is a directory or file
                 new_path = current_path + child["name"] + "/" if "children" in child else current_path
+                
+                # Recursively search in the child
                 result = find_file_node(child, target_path, current_path + (child["name"] + "/") if "children" in child else current_path)
                 if result:
                     return result
+        
         return None
     
     with open(csv_file, 'r', encoding='utf-8') as f:
@@ -316,13 +346,27 @@ def update_sink_details(json_tree, csv_file):
                 "line_number": row[4],
                 "column_number": row[5]
             }
-            # Find the file node in the JSON tree that matches file_path.
+            
+            # Try to find the file node in the JSON tree
             node = find_file_node(json_tree, file_path, current_path="")
+            
+            # If not found, try with alternative path formats
+            if node is None:
+                # Try with 'you-talk/' prefix (common in the output)
+                if not file_path.startswith('you-talk/'):
+                    alt_path = 'you-talk/' + file_path
+                    node = find_file_node(json_tree, alt_path, current_path="")
+                # Try without 'you-talk/' prefix
+                elif file_path.startswith('you-talk/'):
+                    alt_path = file_path[len('you-talk/'):]
+                    node = find_file_node(json_tree, alt_path, current_path="")
+            
             if node is not None:
                 # Append the sink_detail to the node's "sink_details" list.
                 node["sink_details"].append(sink_detail)
             else:
                 print(f"Warning: File path '{file_path}' not found in JSON tree.")
+    
     return json_tree
 
 def process_privado_data():
@@ -339,10 +383,10 @@ def process_privado_data():
         # Process the data and create CSV
         process_data(rows)
         
-        if os.path.exists("privado_output.csv"):
-            print("Successfully created: privado_output.csv")
+        if os.path.exists(PRIVADO_CSV_FILE):
+            print(f"Successfully created: {PRIVADO_CSV_FILE}")
         else:
-            print("Error: privado_output.csv was not created")
+            print(f"Error: {PRIVADO_CSV_FILE} was not created")
     except Exception as e:
         print(f"Error processing privado data: {e}")
 
@@ -351,8 +395,8 @@ def update_json_with_sink_details():
     Update the JSON tree with sink details from the CSV file.
     """
     try:
-        output_json_file = "aider_repomap.json"  # JSON file generated in Task 2
-        csv_file = "privado_output.csv"          # CSV file from privado processing
+        output_json_file = AIDER_JSON_FILE  # JSON file generated in Task 2
+        csv_file = PRIVADO_CSV_FILE         # CSV file from privado processing
         
         # Check if both files exist
         if not os.path.exists(output_json_file):
