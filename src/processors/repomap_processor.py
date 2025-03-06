@@ -1,18 +1,17 @@
 import os
-import re
+import sys
 import json
+import re
 
 def parse_file_content(content: str) -> dict:
     """
     Parses the content of a file summary and extracts classes and their methods.
     
-    Returns a dictionary with two keys:
-      - "classes": a list of objects for each class found.
-          Each class object has:
-              "name": class name,
-              "class_body": code lines within the class outside any method,
-              "methods": a list of methods with "name" and "code".
-      - "other": any code outside of any class definition.
+    Args:
+        content (str): Content of the file summary
+        
+    Returns:
+        dict: Dictionary with classes and other code
     """
     lines = content.splitlines()
     classes = []
@@ -78,10 +77,14 @@ def parse_file_content(content: str) -> dict:
 def parse_input_file(input_file: str):
     """
     Parses the input file and returns a list of tuples (filepath, content).
-    The file is assumed to start with a preamble and then file sections identified
-    by headers (lines that contain a file path ending in .gitignore, .py, .sh, or .json).
+    
+    Args:
+        input_file (str): Path to the input file
+        
+    Returns:
+        list: List of tuples (filepath, content)
     """
-    file_header_re = re.compile(r'^([a-zA-Z0-9._/\-]+(?:\.gitignore|\.py|\.sh|\.json))\:?\s*$')
+    file_header_re = re.compile(r'^([a-zA-Z0-9._/\-]+(?:\.gitignore|\.py|\.sh|\.json|\.js|\.jsx|\.ts|\.tsx|\.ejs))\:?\s*$')
     
     files = []
     current_filepath = None
@@ -114,14 +117,12 @@ def parse_input_file(input_file: str):
 
 def insert_into_tree(root: dict, filepath: str, content: str) -> None:
     """
-    Inserts a file (with its relative filepath and parsed content) into the directory tree.
-    Each file node includes:
-      - "structure": parsed content (classes, methods, etc.)
-      - "source": empty list,
-      - "data_model": empty list,
-      - "third_party_dependencies": empty list,
-      - "sink_details": empty list,
-      - "vulnerabilities": empty list.
+    Inserts a file into the directory tree.
+    
+    Args:
+        root (dict): Root of the directory tree
+        filepath (str): Path to the file
+        content (str): Content of the file
     """
     parts = filepath.split('/')
     current_node = root
@@ -153,22 +154,41 @@ def insert_into_tree(root: dict, filepath: str, content: str) -> None:
 
 def build_directory_tree(files):
     """
-    Builds and returns the full directory tree from a list of (filepath, content) tuples.
+    Builds and returns the full directory tree.
+    
+    Args:
+        files (list): List of tuples (filepath, content)
+        
+    Returns:
+        dict: Directory tree
     """
     root = {"name": "root", "children": []}
     for filepath, content in files:
         insert_into_tree(root, filepath, content)
     return root
 
-def main():
-    input_file = "input.txt"    # Assumes the input file is named input.txt
-    output_file = "output.json"   # The output file to be generated
-
-    files = parse_input_file(input_file)
-    tree = build_directory_tree(files)
+def convert_to_json(input_file):
+    """
+    Convert the repository map text file to JSON.
     
-    with open(output_file, 'w', encoding='utf-8') as f:
-        json.dump(tree, f, indent=4, ensure_ascii=False)
-
-if __name__ == '__main__':
-    main()
+    Args:
+        input_file (str): Path to the input file
+        
+    Returns:
+        str: Path to the output JSON file
+    """
+    output_file = "aider_repomap.json"
+    try:
+        # Parse the input file and build the directory tree
+        files = parse_input_file(input_file)
+        tree = build_directory_tree(files)
+        
+        # Write the tree to the output file
+        with open(output_file, 'w', encoding='utf-8') as f:
+            json.dump(tree, f, indent=4, ensure_ascii=False)
+        
+        print(f"Successfully created: {output_file}")
+        return output_file
+    except Exception as e:
+        print(f"Error converting to JSON: {e}")
+        return None 

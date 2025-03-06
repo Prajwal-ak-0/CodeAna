@@ -1,14 +1,16 @@
 import os
 import json
 import csv
-import argparse
 
 def extract_code_snippet(node):
-    """Combines the code snippet parts from the file's structure.
-    This function collects:
-    - For every class found, it adds its "class_body" and then the "code"
-    for each of its methods.
-    - Additionally, if there's an "other" key inside the structure, that is appended.
+    """
+    Combines the code snippet parts from the file's structure.
+    
+    Args:
+        node (dict): File node
+        
+    Returns:
+        str: Combined code snippet
     """
     snippet_lines = []
     structure = node.get("structure", {})
@@ -28,14 +30,14 @@ def extract_code_snippet(node):
     return "\n".join(snippet_lines).strip()
 
 def extract_sinks(node):
-    """Processes sink_details to produce a clean text block.
-    For each sink, creates a paragraph of the format:
-    <SINK>
-    <ai_sink_label>
-    <code_summary>
-    <code_snippet>
-    </SINK>
-    If there are multiple sinks, paragraphs are separated by an empty line.
+    """
+    Processes sink_details to produce a clean text block.
+    
+    Args:
+        node (dict): File node
+        
+    Returns:
+        str: Formatted sink details
     """
     sinks_details = node.get("sink_details", [])
     sinks_block = []
@@ -49,15 +51,14 @@ def extract_sinks(node):
     return "\n\n".join(sinks_block).strip()
 
 def extract_vulnerabilities(node):
-    """Processes vulnerabilities to produce a clean text block.
-    For each vulnerability, creates a paragraph of the format:
-    <VULNERABILITIES>
-    <code_snippet>
-    <risk_level>
-    <ref_link>
-    <message_to_fix>
-    </VULNERABILITIES>
-    Multiple vulnerabilities are separated by an empty line.
+    """
+    Processes vulnerabilities to produce a clean text block.
+    
+    Args:
+        node (dict): File node
+        
+    Returns:
+        str: Formatted vulnerabilities
     """
     vulns = node.get("vulnerabilities", [])
     vuln_block = []
@@ -74,9 +75,13 @@ def extract_vulnerabilities(node):
 def traverse_node(node, parent_path=""):
     """
     Recursively traverse the JSON hierarchy.
-    If the node has children (i.e. it's a directory), do not generate a CSV row
-    for the directory itself. Instead, prepend the directory name to its children.
-    If the node is a file (no children), extract and return its data fields.
+    
+    Args:
+        node (dict): Current node
+        parent_path (str, optional): Parent path. Defaults to "".
+        
+    Returns:
+        list: List of dictionaries containing file information
     """
     rows = []
     # Build the current full path: if parent_path exists, join it with the node's name;
@@ -102,10 +107,19 @@ def traverse_node(node, parent_path=""):
         })
     return rows
 
-def main():
+def convert_json_to_csv():
+    """
+    Convert the JSON file to CSV.
+    """
     json_file = "aider_repomap.json"
     output_file = "output.csv"
     try:
+        # Check if the JSON file exists
+        if not os.path.exists(json_file):
+            print(f"Error: {json_file} not found")
+            return
+            
+        # Load the JSON data
         with open(json_file, "r", encoding="utf-8") as f:
             data = json.load(f)
     except Exception as e:
@@ -128,7 +142,4 @@ def main():
                 writer.writerow(row)
         print(f"CSV file generated successfully at: {output_file}")
     except Exception as e:
-        print(f"Error writing CSV file: {e}")
-
-if __name__ == "__main__":
-    main()
+        print(f"Error writing CSV file: {e}") 
