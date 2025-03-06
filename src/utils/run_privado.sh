@@ -9,12 +9,17 @@ cd "$1"
 echo "Waiting for privado scan to complete..."
 sleep 5
 
-# Check if .privado directory exists in the target directory
-if [ -d "$2/.privado" ]; then
-    # Copy privado.json to the current directory
-    cp "$2/.privado/privado.json" ./privado.json
-    echo "Copied privado.json to current directory"
+# Navigate to the target project directory
+cd "$2"
+
+# Check if .privado directory exists
+if [ -d ".privado" ]; then
+    # Copy privado.json to the original directory
+    cp .privado/privado.json "$3/privado.json"
+    echo "Copied privado.json to $3"
 else
-    echo "Warning: .privado directory not found in $2"
+    echo "Error: .privado directory not found in $2"
     echo "The scan might still be running or failed to create the .privado directory."
+    echo "Please check the target directory manually after the scan completes."
+    exit 1
 fi

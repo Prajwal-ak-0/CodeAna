@@ -22,14 +22,19 @@ cd "$1"
 echo "Waiting for privado scan to complete..."
 sleep 5
 
-# Check if .privado directory exists in the target directory
-if [ -d "$2/.privado" ]; then
-    # Copy privado.json to the current directory
-    cp "$2/.privado/privado.json" ./privado.json
-    echo "Copied privado.json to current directory"
+# Navigate to the target project directory
+cd "$2"
+
+# Check if .privado directory exists
+if [ -d ".privado" ]; then
+    # Copy privado.json to the original directory
+    cp .privado/privado.json "$3/privado.json"
+    echo "Copied privado.json to $3"
 else
-    echo "Warning: .privado directory not found in $2"
+    echo "Error: .privado directory not found in $2"
     echo "The scan might still be running or failed to create the .privado directory."
+    echo "Please check the target directory manually after the scan completes."
+    exit 1
 fi
 """
     
@@ -73,23 +78,39 @@ def run_privado_scan(project_dir):
         print(f"Running privado scan on directory: {project_dir}")
         print("This may take some time. Please wait...")
         
-        # Run the privado scan
-        run_script(script_name, privado_cli_path, project_dir)
+        # Run the privado scan with current directory as third argument
+        run_script(script_name, privado_cli_path, project_dir, current_dir)
         
-        # Check if the output file exists
-        output_file = "privado.json"
+        # Check if the output file exists in the current directory
+        output_file = os.path.join(current_dir, "privado.json")
         if not os.path.exists(output_file):
             print(f"Warning: {output_file} not found after running privado scan.")
-            remote_file = os.path.join(project_dir, "privado.json")
-            if os.path.exists(remote_file):
-                print(f"Copying from {remote_file} to current directory...")
-                copy_file(remote_file, output_file)
+            
+            # Check if .privado directory exists in target directory
+            privado_dir = os.path.join(project_dir, ".privado")
+            privado_json_path = os.path.join(privado_dir, "privado.json")
+            
+            if os.path.exists(privado_dir):
+                print(f"Found .privado directory in {project_dir}")
+                
+                if os.path.exists(privado_json_path):
+                    print(f"Found privado.json in {privado_dir}")
+                    print("Copying to current directory...")
+                    
+                    # Copy the file manually
+                    copy_file(privado_json_path, "privado.json")
+                    return "privado.json"
+                else:
+                    print(f"Error: privado.json not found in {privado_dir}")
+                    print("The scan might still be running or failed to create the file.")
+                    return None
             else:
-                print(f"Error: Could not find privado.json in {project_dir} either.")
+                print(f"Error: .privado directory not found in {project_dir}")
+                print("The scan might have failed or is still running.")
                 return None
         
-        print(f"Successfully created: {output_file}")
-        return output_file
+        print(f"Successfully created: privado.json")
+        return "privado.json"
     
     except Exception as e:
         print(f"Error running Privado scan: {e}")

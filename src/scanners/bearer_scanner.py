@@ -20,7 +20,7 @@ bearer scan ./ > bearer_output.txt
 # Check if bearer_output.txt was created
 if [ -f "bearer_output.txt" ]; then
     # Copy the file to the original directory
-    cp bearer_output.txt "$2"
+    cp bearer_output.txt "$2/bearer_output.txt"
     echo "Copied bearer_output.txt to $2"
 else
     echo "Error: bearer_output.txt was not created"
@@ -55,25 +55,25 @@ def run_bearer_scan(project_dir):
         run_script(script_name, project_dir, current_dir)
         
         # Verify bearer_output.txt exists in current directory
-        output_file = "bearer_output.txt"
+        output_file = os.path.join(current_dir, "bearer_output.txt")
         if os.path.exists(output_file):
-            print(f"Successfully copied {output_file} to current directory")
+            print(f"Successfully copied bearer_output.txt to current directory")
+            return "bearer_output.txt"
         else:
-            print(f"Error: {output_file} was not copied to current directory")
+            print(f"Error: bearer_output.txt was not copied to current directory")
             
             # Check if the file exists in the target directory
-            bearer_output_path = os.path.join(project_dir, output_file)
+            bearer_output_path = os.path.join(project_dir, "bearer_output.txt")
             if os.path.exists(bearer_output_path):
-                print(f"Found {output_file} in {project_dir}")
+                print(f"Found bearer_output.txt in {project_dir}")
                 print("Copying to current directory...")
                 
                 # Copy the file manually
-                copy_file(bearer_output_path, output_file)
+                copy_file(bearer_output_path, "bearer_output.txt")
+                return "bearer_output.txt"
             else:
-                print(f"Error: {output_file} not found in {project_dir}")
+                print(f"Error: bearer_output.txt not found in {project_dir}")
                 return None
-        
-        return output_file
     except Exception as e:
         print(f"Error running Bearer scan: {e}")
         return None
