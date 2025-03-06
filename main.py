@@ -17,10 +17,107 @@ def get_project_directory():
     # Check if the directory is a Git repository
     git_dir = os.path.join(project_dir, ".git")
     if not os.path.isdir(git_dir):
-        print(f"Error: Directory '{project_dir}' is not a Git repository.")
-        print("Aider requires a Git repository to function properly.")
-        print("Please initialize a Git repository and commit your changes before proceeding.")
-        sys.exit(1)
+        print(f"Warning: Directory '{project_dir}' is not a Git repository.")
+        print("Initializing Git repository...")
+        
+        try:
+            # Change to the project directory
+            os.chdir(project_dir)
+            
+            # Initialize Git repository
+            subprocess.run(["git", "init"], check=True)
+            print("Git repository initialized successfully.")
+            
+            # Create or update .gitignore file
+            gitignore_path = os.path.join(project_dir, ".gitignore")
+            gitignore_content = ".aider*\n"
+            
+            # If .gitignore exists, check if .aider* is already in it
+            if os.path.exists(gitignore_path):
+                with open(gitignore_path, 'r') as f:
+                    existing_content = f.read()
+                
+                if ".aider*" not in existing_content:
+                    with open(gitignore_path, 'a') as f:
+                        f.write("\n" + gitignore_content)
+                    print("Added .aider* to existing .gitignore file.")
+            else:
+                # Create new .gitignore file
+                with open(gitignore_path, 'w') as f:
+                    f.write(gitignore_content)
+                print("Created .gitignore file with .aider* entry.")
+            
+            # Add all files and make initial commit
+            subprocess.run(["git", "add", "-A"], check=True)
+            subprocess.run(["git", "commit", "-m", "Aider Commit"], check=True)
+            print("Initial commit created successfully.")
+            
+            # Change back to original directory
+            os.chdir(os.path.dirname(os.path.abspath(__file__)))
+        except subprocess.CalledProcessError as e:
+            print(f"Error setting up Git repository: {e}")
+            sys.exit(1)
+    else:
+        print("Git repository found. Verifying commit status...")
+        try:
+            # Change to the project directory
+            os.chdir(project_dir)
+            
+            # Check if there are uncommitted changes
+            result = subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True, check=True)
+            if result.stdout.strip():
+                print("Uncommitted changes found. Committing changes...")
+                
+                # Check if .gitignore exists and contains .aider*
+                gitignore_path = os.path.join(project_dir, ".gitignore")
+                if os.path.exists(gitignore_path):
+                    with open(gitignore_path, 'r') as f:
+                        existing_content = f.read()
+                    
+                    if ".aider*" not in existing_content:
+                        with open(gitignore_path, 'a') as f:
+                            f.write("\n.aider*\n")
+                        print("Added .aider* to existing .gitignore file.")
+                else:
+                    # Create new .gitignore file
+                    with open(gitignore_path, 'w') as f:
+                        f.write(".aider*\n")
+                    print("Created .gitignore file with .aider* entry.")
+                
+                # Add all files and commit
+                subprocess.run(["git", "add", "-A"], check=True)
+                subprocess.run(["git", "commit", "-m", "Aider Commit"], check=True)
+                print("Changes committed successfully.")
+            else:
+                print("No uncommitted changes found.")
+                
+                # Still check and update .gitignore if needed
+                gitignore_path = os.path.join(project_dir, ".gitignore")
+                if os.path.exists(gitignore_path):
+                    with open(gitignore_path, 'r') as f:
+                        existing_content = f.read()
+                    
+                    if ".aider*" not in existing_content:
+                        with open(gitignore_path, 'a') as f:
+                            f.write("\n.aider*\n")
+                        # Commit the .gitignore update
+                        subprocess.run(["git", "add", ".gitignore"], check=True)
+                        subprocess.run(["git", "commit", "-m", "Add .aider* to .gitignore"], check=True)
+                        print("Added .aider* to .gitignore and committed.")
+                else:
+                    # Create new .gitignore file
+                    with open(gitignore_path, 'w') as f:
+                        f.write(".aider*\n")
+                    # Commit the new .gitignore
+                    subprocess.run(["git", "add", ".gitignore"], check=True)
+                    subprocess.run(["git", "commit", "-m", "Add .gitignore with .aider* entry"], check=True)
+                    print("Created .gitignore with .aider* entry and committed.")
+            
+            # Change back to original directory
+            os.chdir(os.path.dirname(os.path.abspath(__file__)))
+        except subprocess.CalledProcessError as e:
+            print(f"Error verifying Git repository: {e}")
+            sys.exit(1)
     
     return os.path.abspath(project_dir)
 
@@ -116,19 +213,14 @@ cd "$1"
 echo "Waiting for privado scan to complete..."
 sleep 5
 
-# Navigate to the target project directory
-cd "$2"
-
-# Check if .privado directory exists
-if [ -d ".privado" ]; then
-    # Copy privado.json to the original directory
-    cp .privado/privado.json "$3"
-    echo "Copied privado.json to $3"
+# Check if .privado directory exists in the target directory
+if [ -d "$2/.privado" ]; then
+    # Copy privado.json to the current directory
+    cp "$2/.privado/privado.json" ./privado.json
+    echo "Copied privado.json to current directory"
 else
-    echo "Error: .privado directory not found in $2"
+    echo "Warning: .privado directory not found in $2"
     echo "The scan might still be running or failed to create the .privado directory."
-    echo "Please check the target directory manually after the scan completes."
-    exit 1
 fi
 """
     
@@ -159,58 +251,54 @@ def run_privado_script(project_dir):
         # Get current directory for copying the file back
         current_dir = os.getcwd()
         
+        # Go to the project directory
+        os.chdir(project_dir)
+        
+        # Check if .privado folder exists in the project directory
+        privado_folder = os.path.join(project_dir, ".privado")
+        if os.path.exists(privado_folder):
+            import uuid
+            random_uuid = str(uuid.uuid4())
+            new_folder_name = f".privado_{random_uuid}"
+            new_folder_path = os.path.join(project_dir, new_folder_name)
+            
+            print(f"Found existing .privado folder. Renaming to {new_folder_name}")
+            os.rename(privado_folder, new_folder_path)
+            print(f"Renamed .privado folder to {new_folder_name}")
+        
+        # Change back to the original directory
+        os.chdir(current_dir)
+        
         print(f"Running privado scan on directory: {project_dir}")
         print("This may take some time. Please wait...")
         
-        # Run the script
-        subprocess.run(["./run_privado.sh", privado_cli_path, project_dir, current_dir], check=True)
+        # Run the privado scan
+        subprocess.run(["./run_privado.sh", privado_cli_path, project_dir], check=True)
         
-        # Verify privado.json exists in current directory
-        if os.path.exists("privado.json"):
-            print("Successfully copied privado.json to current directory")
-            return "privado.json"
-        else:
-            print("Warning: privado.json was not copied to current directory.")
-            print("The scan might still be running. Checking target directory...")
-            
-            # Check if .privado directory exists in target directory
-            privado_dir = os.path.join(project_dir, ".privado")
-            privado_json_path = os.path.join(privado_dir, "privado.json")
-            
-            if os.path.exists(privado_dir):
-                print(f"Found .privado directory in {project_dir}")
-                
-                if os.path.exists(privado_json_path):
-                    print(f"Found privado.json in {privado_dir}")
-                    print("Copying to current directory...")
-                    
-                    # Copy the file manually
-                    with open(privado_json_path, 'r', encoding='utf-8') as src:
-                        with open("privado.json", 'w', encoding='utf-8') as dst:
-                            dst.write(src.read())
-                    
-                    print("Successfully copied privado.json to current directory")
-                    return "privado.json"
-                else:
-                    print(f"Error: privado.json not found in {privado_dir}")
-                    print("The scan might still be running or failed to create the file.")
-                    print("Please check the target directory manually after the scan completes.")
-                    sys.exit(1)
+        # Check if the output file exists
+        output_file = "privado.json"
+        if not os.path.exists(output_file):
+            print(f"Warning: {output_file} not found after running privado scan.")
+            remote_file = os.path.join(project_dir, "privado.json")
+            if os.path.exists(remote_file):
+                print(f"Copying from {remote_file} to current directory...")
+                with open(remote_file, 'r', encoding='utf-8') as src:
+                    with open(output_file, 'w', encoding='utf-8') as dst:
+                        dst.write(src.read())
+                print("File copied successfully.")
             else:
-                print(f"Error: .privado directory not found in {project_dir}")
-                print("The scan might have failed or is still running.")
-                print("Please check the target directory manually after the scan completes.")
-                sys.exit(1)
+                print(f"Error: Could not find privado.json in {project_dir} either.")
+                return None
+        
+        print(f"Successfully created: {output_file}")
+        return output_file
+    
     except subprocess.CalledProcessError as e:
         print(f"Error running privado script: {e}")
-        print("The scan might have failed or is still running.")
-        print("Please check the target directory manually after the scan completes.")
-        sys.exit(1)
-    finally:
-        # Delete the shell script
-        if os.path.exists("run_privado.sh"):
-            os.remove("run_privado.sh")
-            print("Deleted run_privado.sh")
+        return None
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return None
 
 # Import privado_to_csv.py functions
 from privado_to_csv import extract_privado_data, process_data
@@ -468,7 +556,7 @@ def main():
         delete_aider_script()
         
         # Ask if user wants to continue with privado scan
-        continue_privado = 'y'
+        continue_privado = input("Do you want to continue with the privado scan? (y/n): ").lower()
         if continue_privado == 'y':
             create_privado_script()
             
@@ -492,8 +580,7 @@ def main():
         
         # Task 4: Run bearer scan and process data
         # Ask if user wants to continue with bearer scan
-        # continue_bearer = input("Do you want to continue with the bearer scan? (y/n): ").lower()
-        continue_bearer = 'y'
+        continue_bearer = input("Do you want to continue with the bearer scan? (y/n): ").lower()
         if continue_bearer == 'y':
             create_bearer_script()
             
